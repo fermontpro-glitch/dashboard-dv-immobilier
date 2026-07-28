@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutGrid,
   Video,
@@ -22,6 +22,8 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
 
   return (
     <aside className="w-64 shrink-0 bg-plum-900 text-blossom-100 flex flex-col">
@@ -45,7 +47,7 @@ export function Sidebar() {
           return (
             <Link
               key={href}
-              href={href}
+              href={query ? `${href}?${query}` : href}
               className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
                 active
                   ? "bg-peach text-plum-950"

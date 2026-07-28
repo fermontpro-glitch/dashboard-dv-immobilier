@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 export default async function AutrePage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; since?: string; until?: string }>;
 }) {
-  const { period } = await searchParams;
-  return <TypeView type="other" label="Autre" period={period} />;
+  const periodParams = await searchParams;
+  return <TypeView type="other" label="Autre" periodParams={periodParams} />;
 }

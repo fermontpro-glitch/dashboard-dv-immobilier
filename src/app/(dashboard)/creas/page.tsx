@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 export default async function CreasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; since?: string; until?: string }>;
 }) {
-  const { period } = await searchParams;
-  const range = resolvePeriod(period);
+  const params = await searchParams;
+  const range = resolvePeriod(params);
 
   const creatives = await getCreatives({ range });
 

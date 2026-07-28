@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic";
 export default async function OverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; since?: string; until?: string }>;
 }) {
-  const { period } = await searchParams;
-  const range = resolvePeriod(period);
+  const { period, since, until } = await searchParams;
+  const range = resolvePeriod({ period, since, until });
   const prevRange = previousPeriod(range);
 
   const [current, previous, daily, breakdown] = await Promise.all([

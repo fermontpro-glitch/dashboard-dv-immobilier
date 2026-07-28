@@ -2,20 +2,20 @@ import { KpiCard } from "@/components/KpiCard";
 import { CampaignsTable } from "@/components/CampaignsTable";
 import { buildTypeKpis } from "@/lib/kpiCards";
 import { getCampaignsTable, getKpis } from "@/lib/meta/queries";
-import { previousPeriod, resolvePeriod } from "@/lib/meta/period";
+import { previousPeriod, resolvePeriod, type PeriodParams } from "@/lib/meta/period";
 import type { CampaignType } from "@/lib/meta/types";
 import { Download } from "lucide-react";
 
 export async function TypeView({
   type,
   label,
-  period,
+  periodParams,
 }: {
   type: CampaignType;
   label: string;
-  period?: string;
+  periodParams: PeriodParams;
 }) {
-  const range = resolvePeriod(period);
+  const range = resolvePeriod(periodParams);
   const prevRange = previousPeriod(range);
 
   const [current, previous, { rows, total }] = await Promise.all([

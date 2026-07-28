@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 export default async function LeadMagnetPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; since?: string; until?: string }>;
 }) {
-  const { period } = await searchParams;
-  return <TypeView type="leadmagnet" label="Lead Magnet" period={period} />;
+  const periodParams = await searchParams;
+  return <TypeView type="leadmagnet" label="Lead Magnet" periodParams={periodParams} />;
 }

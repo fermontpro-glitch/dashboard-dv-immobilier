@@ -5,8 +5,8 @@ export const dynamic = "force-dynamic";
 export default async function WebinairePage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; since?: string; until?: string }>;
 }) {
-  const { period } = await searchParams;
-  return <TypeView type="webinaire" label="Webinaire" period={period} />;
+  const periodParams = await searchParams;
+  return <TypeView type="webinaire" label="Webinaire" periodParams={periodParams} />;
 }
