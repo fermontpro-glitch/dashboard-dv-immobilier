@@ -17,6 +17,8 @@ export interface RawInsightsRow {
   date_stop?: string;
   campaign_id?: string;
   campaign_name?: string;
+  adset_id?: string;
+  adset_name?: string;
   ad_id?: string;
   ad_name?: string;
   spend?: string;
@@ -53,11 +55,18 @@ export interface DailyPoint {
   leads: number;
 }
 
+export interface AdSetRow {
+  id: string;
+  name: string;
+  metrics: Metrics;
+}
+
 export interface CampaignRow {
   id: string;
   name: string;
   type: CampaignType;
   metrics: Metrics;
+  adSets: AdSetRow[];
 }
 
 export interface TypeBreakdown {

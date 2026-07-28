@@ -4,6 +4,7 @@ import { classifyCampaign, isExcludedCampaign } from "./classify";
 import { getActionValue, hookRate, holdRate, metricsFromRow, sumRows, EMPTY_METRICS } from "./metrics";
 import type { DateRange } from "./period";
 import type {
+  AdSetRow,
   CampaignRow,
   CampaignType,
   Creative,
@@ -49,7 +50,7 @@ function filteringParam(campaignIds: string[]): string {
 }
 
 async function fetchInsights(opts: {
-  level: "account" | "campaign" | "ad";
+  level: "account" | "campaign" | "adset" | "ad";
   fields: string[];
   campaignIds: string[];
   range: DateRange;
@@ -143,10 +144,30 @@ export async function getCampaignsTable(
 ): Promise<{ rows: CampaignRow[]; total: Metrics }> {
   const campaigns = await getClassifiedCampaigns();
   const ids = idsForType(campaigns, type);
-  const [rawRows, total] = await Promise.all([
+  const [rawRows, adSetRows, total] = await Promise.all([
     fetchInsights({ level: "campaign", fields: [...BASE_FIELDS, "campaign_id"], campaignIds: ids, range }),
+    fetchInsights({
+      level: "adset",
+      fields: [...BASE_FIELDS, "campaign_id", "adset_id", "adset_name"],
+      campaignIds: ids,
+      range,
+    }),
     getKpis(range, type),
   ]);
+
+  const adSetsByCampaign = new Map<string, AdSetRow[]>();
+  for (const row of adSetRows) {
+    if (!row.campaign_id || !row.adset_id) continue;
+    if (!adSetsByCampaign.has(row.campaign_id)) adSetsByCampaign.set(row.campaign_id, []);
+    adSetsByCampaign.get(row.campaign_id)!.push({
+      id: row.adset_id,
+      name: row.adset_name ?? "—",
+      metrics: metricsFromRow(row),
+    });
+  }
+  for (const adSets of adSetsByCampaign.values()) {
+    adSets.sort((a, b) => b.metrics.spend - a.metrics.spend);
+  }
 
   const nameOf = new Map(campaigns.map((c) => [c.id, c.name]));
   const rows: CampaignRow[] = rawRows
@@ -155,6 +176,7 @@ export async function getCampaignsTable(
       name: (row.campaign_id && nameOf.get(row.campaign_id)) || row.campaign_name || "—",
       type,
       metrics: metricsFromRow(row),
+      adSets: (row.campaign_id && adSetsByCampaign.get(row.campaign_id)) || [],
     }))
     .sort((a, b) => b.metrics.spend - a.metrics.spend);
 
