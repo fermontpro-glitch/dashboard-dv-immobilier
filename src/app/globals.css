@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Obsidian Plum */
+  --plum-900: #4a2c3f;
+  --plum-800: #3a2233;
+  --plum-950: #2c1825;
+  --plum-600: #5e3d52;
+
+  /* Creamy Peach */
+  --peach: #f4a384;
+  --peach-dark: #dc8c6f;
+  --peach-darker: #c97b5c;
+  --peach-light: #fbd7c6;
+
+  /* Warm Butter */
+  --butter: #f5e7cf;
+
+  /* Baby Blossom */
+  --blossom: #faefe9;
+  --blossom-100: #fffaf6;
+
+  /* Blue */
+  --blue: #486d83;
+  --blue-light: #dde6ec;
+
+  /* Status */
+  --positive: #4a8a6e;
+  --positive-bg: #dceae3;
+  --negative: #b85c5c;
+  --negative-bg: #f1d9d9;
+
+  /* Text & lines */
+  --muted: #7a5063;
+  --subtle: #9e8492;
+  --border: #e8dad0;
+  --divider: #efe3da;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-plum-900: var(--plum-900);
+  --color-plum-800: var(--plum-800);
+  --color-plum-950: var(--plum-950);
+  --color-plum-600: var(--plum-600);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-peach: var(--peach);
+  --color-peach-dark: var(--peach-dark);
+  --color-peach-darker: var(--peach-darker);
+  --color-peach-light: var(--peach-light);
+
+  --color-butter: var(--butter);
+
+  --color-blossom: var(--blossom);
+  --color-blossom-100: var(--blossom-100);
+
+  --color-blue: var(--blue);
+  --color-blue-light: var(--blue-light);
+
+  --color-positive: var(--positive);
+  --color-positive-bg: var(--positive-bg);
+  --color-negative: var(--negative);
+  --color-negative-bg: var(--negative-bg);
+
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-divider: var(--divider);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-pill: var(--radius-pill);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-accent: var(--font-accent);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--blossom);
+  color: var(--plum-900);
+}
+
+::selection {
+  background: var(--peach-light);
+  color: var(--plum-950);
 }
