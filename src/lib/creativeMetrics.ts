@@ -19,8 +19,8 @@ export const METRIC_REGISTRY: Record<MetricKey, { label: string; bulletColor: st
   holdRate: { label: "Hold rate", bulletColor: "#486D83" },
 };
 
-export const IMAGE_METRIC_OPTIONS: MetricKey[] = ["spend", "linkClicks", "cpc", "ctr", "leads", "cpl"];
-export const VIDEO_METRIC_OPTIONS: MetricKey[] = ["spend", "hookRate", "holdRate", "leads", "cpl"];
+export const IMAGE_METRIC_OPTIONS: MetricKey[] = ["spend", "leads", "cpl", "linkClicks", "ctr", "cpc"];
+export const VIDEO_METRIC_OPTIONS: MetricKey[] = ["spend", "leads", "cpl", "hookRate", "holdRate"];
 
-export const IMAGE_DEFAULT_ACTIVE: MetricKey[] = ["spend", "linkClicks", "ctr", "leads", "cpl"];
-export const VIDEO_DEFAULT_ACTIVE: MetricKey[] = ["spend", "hookRate", "holdRate", "leads", "cpl"];
+export const IMAGE_DEFAULT_ACTIVE: MetricKey[] = ["spend", "leads", "cpl", "linkClicks", "ctr"];
+export const VIDEO_DEFAULT_ACTIVE: MetricKey[] = ["spend", "leads", "cpl", "hookRate", "holdRate"];

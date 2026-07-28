@@ -3,7 +3,7 @@ import type { TypeBreakdown } from "@/lib/meta/types";
 import { formatDecimal, formatEuroDec, formatEuroInt, formatInt } from "@/lib/format";
 
 const TYPE_COLOR: Record<TypeBreakdown["type"], string> = {
-  webex: "#486D83",
+  webinaire: "#486D83",
   challenge: "#DC8C6F",
   leadmagnet: "#5E3D52",
   other: "#9E8492",

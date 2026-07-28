@@ -1,7 +1,7 @@
-export type CampaignType = "webex" | "challenge" | "leadmagnet" | "other";
+export type CampaignType = "webinaire" | "challenge" | "leadmagnet" | "other";
 
 export const CAMPAIGN_TYPE_LABELS: Record<CampaignType, string> = {
-  webex: "Webex",
+  webinaire: "Webinaire",
   challenge: "Challenge",
   leadmagnet: "Lead Magnet",
   other: "Autre",
@@ -78,6 +78,7 @@ export interface Creative {
   thumbnailUrl: string | null;
   videoDurationSec: number | null;
   adCount: number;
+  sampleAdId: string;
   metrics: Metrics;
   hookRate: number | null;
   holdRate: number | null;

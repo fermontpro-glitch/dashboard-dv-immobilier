@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { CreativeCard } from "./CreativeCard";
+import { CreativePreviewModal } from "./CreativePreviewModal";
 import type { Creative, CampaignType } from "@/lib/meta/types";
 import { CAMPAIGN_TYPE_LABELS } from "@/lib/meta/types";
 import {
@@ -25,9 +26,10 @@ const FORMAT_OPTIONS: { value: FormatFilter; label: string }[] = [
 
 const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
   { value: "all", label: "Tous types" },
-  { value: "webex", label: CAMPAIGN_TYPE_LABELS.webex },
+  { value: "webinaire", label: CAMPAIGN_TYPE_LABELS.webinaire },
   { value: "challenge", label: CAMPAIGN_TYPE_LABELS.challenge },
   { value: "leadmagnet", label: CAMPAIGN_TYPE_LABELS.leadmagnet },
+  { value: "other", label: CAMPAIGN_TYPE_LABELS.other },
 ];
 
 function metricValue(c: Creative, key: MetricKey): number {
@@ -58,6 +60,7 @@ export function CreasGallery({ creatives }: { creatives: Creative[] }) {
   const [activeMetrics, setActiveMetrics] = useState<Set<MetricKey>>(
     new Set(IMAGE_DEFAULT_ACTIVE)
   );
+  const [preview, setPreview] = useState<{ adId: string; name: string } | null>(null);
 
   const metricOptions = format === "video" ? VIDEO_METRIC_OPTIONS : IMAGE_METRIC_OPTIONS;
   const sortOptions = format === "video"
@@ -154,9 +157,27 @@ export function CreasGallery({ creatives }: { creatives: Creative[] }) {
       ) : (
         <div className="grid grid-cols-4 gap-4">
           {filtered.map((creative, i) => (
-            <CreativeCard key={creative.id} creative={creative} rank={i + 1} activeMetrics={activeMetricsOrdered} />
+            <CreativeCard
+              key={creative.id}
+              creative={creative}
+              rank={i + 1}
+              activeMetrics={activeMetricsOrdered}
+              onPlay={
+                creative.format === "video"
+                  ? () => setPreview({ adId: creative.sampleAdId, name: creative.name })
+                  : undefined
+              }
+            />
           ))}
         </div>
+      )}
+
+      {preview && (
+        <CreativePreviewModal
+          adId={preview.adId}
+          name={preview.name}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   );

@@ -8,13 +8,15 @@ import {
   Mic,
   Trophy,
   Magnet,
+  Smartphone,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/", label: "Vue d'ensemble", icon: LayoutGrid },
-  { href: "/webex", label: "Vue Webex", icon: Mic },
+  { href: "/webinaire", label: "Vue Webinaire", icon: Mic },
   { href: "/challenge", label: "Vue Challenge", icon: Trophy },
   { href: "/lead-magnet", label: "Vue Lead Magnet", icon: Magnet },
+  { href: "/autre", label: "Vue Autre", icon: Smartphone },
   { href: "/creas", label: "Créas", icon: Video },
 ];
 
@@ -28,7 +30,7 @@ export function Sidebar() {
           <span className="h-9 w-9 rounded-full bg-gradient-to-br from-peach to-peach-darker" />
           <div className="leading-tight">
             <div className="font-display font-bold text-lg">
-              Orbit<span className="text-peach">Media</span>
+              LTV<span className="text-peach">Marketing</span>
             </div>
             <div className="text-[10px] tracking-widest text-blossom-100/60 uppercase">
               Reporting Meta Ads
@@ -58,7 +60,7 @@ export function Sidebar() {
       </nav>
 
       <div className="px-6 py-5 border-t border-white/10 text-[11px] text-blossom-100/50">
-        Orbit Media · Reporting Meta Ads
+        LTV Marketing · Reporting Meta Ads
       </div>
     </aside>
   );

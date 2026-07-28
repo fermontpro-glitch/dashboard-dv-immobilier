@@ -1,6 +1,6 @@
 import type { CampaignType } from "./types";
 
-const WEBEX_RE = /\b(webi|webex|webinaire)\b/i;
+const WEBINAIRE_RE = /\b(webi|webex|webinaire)\b/i;
 const CHALLENGE_RE = /\bchallenge\b/i;
 const LEAD_MAGNET_RE = /\b(lm|lead ?magnet)\b/i;
 
@@ -13,7 +13,7 @@ export function isExcludedCampaign(name: string): boolean {
 }
 
 export function classifyCampaign(name: string): CampaignType {
-  if (WEBEX_RE.test(name)) return "webex";
+  if (WEBINAIRE_RE.test(name)) return "webinaire";
   if (CHALLENGE_RE.test(name)) return "challenge";
   if (LEAD_MAGNET_RE.test(name)) return "leadmagnet";
   return "other";

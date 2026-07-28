@@ -20,7 +20,7 @@ export function formatDecimal(n: number, digits = 2): string {
   }).format(n);
 }
 
-/** "1 842 K" style compact thousands, matching the Orbit Media mockup. */
+/** "1 842 K" style compact thousands, matching the dashboard's design system. */
 export function formatCompactK(n: number): string {
   if (Math.abs(n) < 1000) return formatInt(n);
   return `${formatInt(Math.round(n / 1000))} K`;

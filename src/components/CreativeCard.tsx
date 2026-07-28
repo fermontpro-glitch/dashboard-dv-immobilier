@@ -15,16 +15,23 @@ export function CreativeCard({
   creative,
   rank,
   activeMetrics,
+  onPlay,
 }: {
   creative: Creative;
   rank: number;
   activeMetrics: MetricKey[];
+  onPlay?: () => void;
 }) {
   const duration = formatDuration(creative.videoDurationSec);
 
   return (
     <div className="rounded-lg border border-border bg-blossom-100 overflow-hidden flex flex-col">
-      <div className="relative aspect-[9/13] bg-plum-800">
+      <div
+        className={`relative aspect-[9/13] bg-plum-800 ${onPlay ? "cursor-pointer group" : ""}`}
+        onClick={onPlay}
+        role={onPlay ? "button" : undefined}
+        aria-label={onPlay ? `Lire la vidéo ${creative.name}` : undefined}
+      >
         {creative.thumbnailUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -45,7 +52,7 @@ export function CreativeCard({
 
         {creative.format === "video" && (
           <span className="absolute inset-0 flex items-center justify-center">
-            <span className="h-11 w-11 rounded-full bg-blossom-100/90 flex items-center justify-center">
+            <span className="h-11 w-11 rounded-full bg-blossom-100/90 flex items-center justify-center transition-transform group-hover:scale-110">
               <Play size={18} className="text-plum-900 translate-x-[1px]" fill="currentColor" />
             </span>
           </span>

@@ -33,7 +33,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Orbit Media — Reporting Meta Ads",
+  title: "LTV Marketing — Reporting Meta Ads",
   description: "Dashboard de reporting Meta Ads — DV Immobilier",
 };
 

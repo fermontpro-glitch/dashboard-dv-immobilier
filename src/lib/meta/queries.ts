@@ -120,7 +120,7 @@ export async function getTypeBreakdown(range: DateRange): Promise<TypeBreakdown[
 
   const totalSpend = rows.reduce((sum, r) => sum + Number(r.spend ?? 0), 0);
 
-  const types: CampaignType[] = ["webex", "challenge", "leadmagnet", "other"];
+  const types: CampaignType[] = ["webinaire", "challenge", "leadmagnet", "other"];
   return types
     .filter((t) => byType.has(t))
     .map((type) => {
@@ -241,6 +241,7 @@ export async function getCreatives(opts: {
     campaignType: CampaignType;
     thumbnailUrl: string | null;
     videoId: string | null;
+    sampleAdId: string;
     adIds: Set<string>;
     rows: RawInsightsRow[];
     videoPlays: number;
@@ -261,6 +262,7 @@ export async function getCreatives(opts: {
         campaignType: typeOf.get(info.campaignId) ?? "other",
         thumbnailUrl: info.thumbnailUrl,
         videoId: info.videoId,
+        sampleAdId: info.adId,
         adIds: new Set(),
         rows: [],
         videoPlays: 0,
@@ -297,6 +299,7 @@ export async function getCreatives(opts: {
       thumbnailUrl: g.thumbnailUrl,
       videoDurationSec: g.videoId ? durations[g.videoId]?.length ?? null : null,
       adCount: g.adIds.size,
+      sampleAdId: g.sampleAdId,
       metrics,
       hookRate: isVideo ? hookRate(videoViews3s, metrics.impressions) : null,
       holdRate: isVideo ? holdRate(g.videoP100, g.videoPlays) : null,
