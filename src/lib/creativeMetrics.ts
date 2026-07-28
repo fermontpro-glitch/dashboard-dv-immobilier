@@ -19,6 +19,18 @@ export const METRIC_REGISTRY: Record<MetricKey, { label: string; bulletColor: st
   holdRate: { label: "Hold rate", bulletColor: "#486D83" },
 };
 
+/** Whether a higher or lower value is the "better" one — drives table highlight direction. */
+export const METRIC_BETTER_WHEN: Record<MetricKey, "high" | "low"> = {
+  spend: "high",
+  linkClicks: "high",
+  cpc: "low",
+  ctr: "high",
+  leads: "high",
+  cpl: "low",
+  hookRate: "high",
+  holdRate: "high",
+};
+
 export const IMAGE_METRIC_OPTIONS: MetricKey[] = ["spend", "leads", "cpl", "linkClicks", "ctr", "cpc"];
 export const VIDEO_METRIC_OPTIONS: MetricKey[] = ["spend", "leads", "cpl", "hookRate", "holdRate"];
 

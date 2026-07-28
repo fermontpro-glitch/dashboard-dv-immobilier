@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, LayoutGrid, Table2 } from "lucide-react";
 import { CreativeCard } from "./CreativeCard";
+import { CreativesTable } from "./CreativesTable";
 import { CreativePreviewModal } from "./CreativePreviewModal";
 import type { Creative, CampaignType } from "@/lib/meta/types";
 import { CAMPAIGN_TYPE_LABELS } from "@/lib/meta/types";
@@ -17,6 +18,7 @@ import {
 
 type FormatFilter = "all" | "image" | "video";
 type TypeFilter = "all" | CampaignType;
+type ViewMode = "table" | "grid";
 
 const FORMAT_OPTIONS: { value: FormatFilter; label: string }[] = [
   { value: "image", label: "Image" },
@@ -54,6 +56,7 @@ function metricValue(c: Creative, key: MetricKey): number {
 }
 
 export function CreasGallery({ creatives }: { creatives: Creative[] }) {
+  const [view, setView] = useState<ViewMode>("table");
   const [format, setFormat] = useState<FormatFilter>("image");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [sortKey, setSortKey] = useState<MetricKey>("leads");
@@ -94,6 +97,10 @@ export function CreasGallery({ creatives }: { creatives: Creative[] }) {
 
   const activeMetricsOrdered = metricOptions.filter((k) => activeMetrics.has(k));
 
+  function openPreview(creative: Creative) {
+    setPreview({ adId: creative.sampleAdId, name: creative.name });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between">
@@ -111,19 +118,42 @@ export function CreasGallery({ creatives }: { creatives: Creative[] }) {
         <PillGroup value={format} onChange={changeFormat} options={FORMAT_OPTIONS} />
         <PillGroup value={typeFilter} onChange={setTypeFilter} options={TYPE_OPTIONS} />
 
-        <div className="relative ml-auto">
-          <select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as MetricKey)}
-            className="appearance-none bg-blossom-100 border border-border rounded-pill pl-4 pr-9 py-2 text-sm font-medium text-plum-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-peach"
-          >
-            {sortOptions.map((key) => (
-              <option key={key} value={key}>
-                Trier : {METRIC_REGISTRY[key].label}
-              </option>
-            ))}
-          </select>
-          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-subtle text-xs">▾</span>
+        <div className="ml-auto flex items-center gap-3">
+          <div className="inline-flex rounded-pill border border-border bg-blossom-100 p-1 gap-1">
+            <button
+              onClick={() => setView("table")}
+              aria-label="Vue tableau"
+              className={`rounded-pill p-1.5 transition-colors ${
+                view === "table" ? "bg-plum-900 text-blossom-100" : "text-muted hover:text-plum-900"
+              }`}
+            >
+              <Table2 size={16} />
+            </button>
+            <button
+              onClick={() => setView("grid")}
+              aria-label="Vue grille"
+              className={`rounded-pill p-1.5 transition-colors ${
+                view === "grid" ? "bg-plum-900 text-blossom-100" : "text-muted hover:text-plum-900"
+              }`}
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
+
+          <div className="relative">
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as MetricKey)}
+              className="appearance-none bg-blossom-100 border border-border rounded-pill pl-4 pr-9 py-2 text-sm font-medium text-plum-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-peach"
+            >
+              {sortOptions.map((key) => (
+                <option key={key} value={key}>
+                  Trier : {METRIC_REGISTRY[key].label}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-subtle text-xs">▾</span>
+          </div>
         </div>
       </div>
 
@@ -150,23 +180,27 @@ export function CreasGallery({ creatives }: { creatives: Creative[] }) {
         })}
       </div>
 
-      {filtered.length === 0 ? (
+      {view === "table" ? (
+        <CreativesTable
+          creatives={filtered}
+          metrics={activeMetricsOrdered}
+          sortKey={sortKey}
+          onSortChange={setSortKey}
+          onPlay={openPreview}
+        />
+      ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-border bg-blossom-100 p-10 text-center text-muted">
           Aucune créa ne correspond à ces filtres sur cette période.
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-6 gap-4">
           {filtered.map((creative, i) => (
             <CreativeCard
               key={creative.id}
               creative={creative}
               rank={i + 1}
               activeMetrics={activeMetricsOrdered}
-              onPlay={
-                creative.format === "video"
-                  ? () => setPreview({ adId: creative.sampleAdId, name: creative.name })
-                  : undefined
-              }
+              onPlay={creative.format === "video" ? () => openPreview(creative) : undefined}
             />
           ))}
         </div>
