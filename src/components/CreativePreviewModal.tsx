@@ -47,7 +47,10 @@ export function CreativePreviewModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-plum-950/80 backdrop-blur-sm px-4"
       onClick={onClose}
     >
-      <div className="flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex flex-col items-center gap-3 max-h-[92vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between w-full">
           <span className="font-mono text-xs text-blossom-100/80 truncate max-w-[280px]">{name}</span>
           <button
@@ -59,14 +62,14 @@ export function CreativePreviewModal({
           </button>
         </div>
 
-        <div className="relative w-[320px] h-[567px] rounded-lg overflow-hidden bg-plum-800 flex items-center justify-center">
+        <div className="relative w-[340px] max-h-[80vh] rounded-lg overflow-y-auto bg-plum-800 flex items-center justify-center">
           {error && <p className="text-sm text-blossom-100/70 px-6 text-center">{error}</p>}
           {!error && !src && <p className="text-sm text-blossom-100/70">Chargement…</p>}
           {src && (
             <iframe
               src={src}
-              width={320}
-              height={567}
+              width={340}
+              height={900}
               scrolling="auto"
               allow="autoplay; encrypted-media"
               className="border-0"
@@ -74,6 +77,13 @@ export function CreativePreviewModal({
             />
           )}
         </div>
+
+        {src && (
+          <p className="text-[11px] text-blossom-100/60 max-w-[340px] text-center">
+            Premier chargement : accepte ou refuse les cookies Meta tout en bas de l&apos;encadré pour
+            accéder à la vidéo. Si le son ne joue pas, cherche l&apos;icône 🔇 sur le lecteur.
+          </p>
+        )}
       </div>
     </div>
   );
