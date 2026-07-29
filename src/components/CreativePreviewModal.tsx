@@ -67,8 +67,8 @@ export function CreativePreviewModal({
               src={src}
               width={320}
               height={567}
-              scrolling="no"
-              allow="autoplay"
+              scrolling="auto"
+              allow="autoplay; encrypted-media"
               className="border-0"
               title={name}
             />
