@@ -30,7 +30,7 @@ export function CreativeCard({
         className={`relative aspect-[9/13] bg-plum-800 ${onPlay ? "cursor-pointer group" : ""}`}
         onClick={onPlay}
         role={onPlay ? "button" : undefined}
-        aria-label={onPlay ? `Lire la vidéo ${creative.name}` : undefined}
+        aria-label={onPlay ? `Voir l'aperçu de ${creative.name}` : undefined}
       >
         {creative.thumbnailUrl && (
           // eslint-disable-next-line @next/next/no-img-element

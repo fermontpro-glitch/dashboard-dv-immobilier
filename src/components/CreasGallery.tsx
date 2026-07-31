@@ -200,7 +200,7 @@ export function CreasGallery({ creatives }: { creatives: Creative[] }) {
               creative={creative}
               rank={i + 1}
               activeMetrics={activeMetricsOrdered}
-              onPlay={creative.format === "video" ? () => openPreview(creative) : undefined}
+              onPlay={() => openPreview(creative)}
             />
           ))}
         </div>

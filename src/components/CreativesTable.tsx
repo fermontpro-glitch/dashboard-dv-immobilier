@@ -115,8 +115,10 @@ export function CreativesTable({
             >
               <td className="px-4 py-2.5">
                 <div
-                  className={`flex items-center gap-3 ${creative.format === "video" ? "cursor-pointer group" : ""}`}
-                  onClick={creative.format === "video" ? () => onPlay(creative) : undefined}
+                  className="flex items-center gap-3 cursor-pointer group"
+                  onClick={() => onPlay(creative)}
+                  role="button"
+                  aria-label={`Voir l'aperçu de ${creative.name}`}
                 >
                   <div className="relative h-11 w-11 shrink-0 rounded-md overflow-hidden bg-plum-800">
                     {creative.thumbnailUrl && (
@@ -132,11 +134,7 @@ export function CreativesTable({
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <div
-                      className={`font-sans font-semibold text-plum-900 truncate max-w-[260px] ${
-                        creative.format === "video" ? "group-hover:underline" : ""
-                      }`}
-                    >
+                    <div className="font-sans font-semibold text-plum-900 truncate max-w-[260px] group-hover:underline">
                       {creative.name}
                     </div>
                     <div className="text-[11px] text-subtle">{creative.adCount} ads</div>
