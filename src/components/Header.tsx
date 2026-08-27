@@ -1,12 +1,11 @@
 import { PeriodSelector } from "./PeriodSelector";
+import { AccountSelector } from "./AccountSelector";
+import type { AdAccount } from "@/lib/meta/accounts";
 
-export function Header() {
+export function Header({ accounts }: { accounts: AdAccount[] }) {
   return (
     <header className="bg-plum-900 text-blossom-100 px-8 py-5 flex items-center justify-between border-b border-white/10">
-      <div>
-        <div className="font-display font-bold text-base leading-tight">DV Immobilier</div>
-        <div className="text-sm text-blossom-100/60">Compte publicitaire Meta</div>
-      </div>
+      <AccountSelector accounts={accounts} />
 
       <div className="flex items-center gap-3">
         <PeriodSelector />

@@ -11,9 +11,8 @@ function getEnv(name: string): string {
   return value;
 }
 
-export function getAdAccountId(): string {
-  const raw = getEnv("META_AD_ACCOUNT_ID");
-  return raw.startsWith("act_") ? raw : `act_${raw}`;
+export function toActId(accountId: string): string {
+  return accountId.startsWith("act_") ? accountId : `act_${accountId}`;
 }
 
 interface MetaErrorBody {

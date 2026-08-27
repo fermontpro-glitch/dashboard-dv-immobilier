@@ -1,5 +1,5 @@
 import "server-only";
-import { getAdAccountId, metaFetchAll, metaGetByIds } from "./client";
+import { toActId, metaFetchAll, metaGetByIds } from "./client";
 import { classifyCampaign, isExcludedCampaign } from "./classify";
 import { getActionValue, hookRate, holdRate, metricsFromRow, sumRows, EMPTY_METRICS } from "./metrics";
 import type { DateRange } from "./period";
@@ -20,21 +20,24 @@ interface ClassifiedCampaign {
   type: CampaignType;
 }
 
-let campaignsCache: Promise<ClassifiedCampaign[]> | null = null;
+const campaignsCache = new Map<string, Promise<ClassifiedCampaign[]>>();
 
-/** All non-excluded campaigns, classified. Cached per server-process lifetime (campaign names/ids rarely change mid-session). */
-async function getClassifiedCampaigns(): Promise<ClassifiedCampaign[]> {
-  if (!campaignsCache) {
-    campaignsCache = metaFetchAll<{ id: string; name: string }>(
-      `/${getAdAccountId()}/campaigns`,
-      { fields: "id,name", limit: "200" }
-    ).then((rows) =>
-      rows
-        .filter((c) => !isExcludedCampaign(c.name))
-        .map((c) => ({ id: c.id, name: c.name, type: classifyCampaign(c.name) }))
+/** All non-excluded campaigns for an account, classified. Cached per account for the server-process lifetime. */
+async function getClassifiedCampaigns(accountId: string): Promise<ClassifiedCampaign[]> {
+  if (!campaignsCache.has(accountId)) {
+    campaignsCache.set(
+      accountId,
+      metaFetchAll<{ id: string; name: string }>(`/${toActId(accountId)}/campaigns`, {
+        fields: "id,name",
+        limit: "200",
+      }).then((rows) =>
+        rows
+          .filter((c) => !isExcludedCampaign(c.name))
+          .map((c) => ({ id: c.id, name: c.name, type: classifyCampaign(c.name) }))
+      )
     );
   }
-  return campaignsCache;
+  return campaignsCache.get(accountId)!;
 }
 
 function idsForType(campaigns: ClassifiedCampaign[], type?: CampaignType): string[] {
@@ -50,6 +53,7 @@ function filteringParam(campaignIds: string[]): string {
 }
 
 async function fetchInsights(opts: {
+  accountId: string;
   level: "account" | "campaign" | "adset" | "ad";
   fields: string[];
   campaignIds: string[];
@@ -67,24 +71,25 @@ async function fetchInsights(opts: {
   };
   if (opts.timeIncrement) params.time_increment = opts.timeIncrement;
 
-  return metaFetchAll<RawInsightsRow>(`/${getAdAccountId()}/insights`, params);
+  return metaFetchAll<RawInsightsRow>(`/${toActId(opts.accountId)}/insights`, params);
 }
 
 const BASE_FIELDS = ["spend", "impressions", "reach", "frequency", "inline_link_clicks", "actions"];
 
 /** The 8 headline KPIs, optionally scoped to a single campaign type. */
-export async function getKpis(range: DateRange, type?: CampaignType): Promise<Metrics> {
-  const campaigns = await getClassifiedCampaigns();
+export async function getKpis(range: DateRange, accountId: string, type?: CampaignType): Promise<Metrics> {
+  const campaigns = await getClassifiedCampaigns(accountId);
   const ids = idsForType(campaigns, type);
-  const rows = await fetchInsights({ level: "account", fields: BASE_FIELDS, campaignIds: ids, range });
+  const rows = await fetchInsights({ accountId, level: "account", fields: BASE_FIELDS, campaignIds: ids, range });
   return rows[0] ? metricsFromRow(rows[0]) : EMPTY_METRICS;
 }
 
 /** Daily spend + leads series for the evolution chart (account-wide, excluded campaigns already filtered out). */
-export async function getDailySeries(range: DateRange): Promise<DailyPoint[]> {
-  const campaigns = await getClassifiedCampaigns();
+export async function getDailySeries(range: DateRange, accountId: string): Promise<DailyPoint[]> {
+  const campaigns = await getClassifiedCampaigns(accountId);
   const ids = idsForType(campaigns);
   const rows = await fetchInsights({
+    accountId,
     level: "account",
     fields: ["spend", "actions"],
     campaignIds: ids,
@@ -101,10 +106,11 @@ export async function getDailySeries(range: DateRange): Promise<DailyPoint[]> {
 }
 
 /** Spend/leads/CPL/CTR split across the three campaign types (account-wide). */
-export async function getTypeBreakdown(range: DateRange): Promise<TypeBreakdown[]> {
-  const campaigns = await getClassifiedCampaigns();
+export async function getTypeBreakdown(range: DateRange, accountId: string): Promise<TypeBreakdown[]> {
+  const campaigns = await getClassifiedCampaigns(accountId);
   const ids = idsForType(campaigns);
   const rows = await fetchInsights({
+    accountId,
     level: "campaign",
     fields: [...BASE_FIELDS, "campaign_id"],
     campaignIds: ids,
@@ -140,19 +146,21 @@ export async function getTypeBreakdown(range: DateRange): Promise<TypeBreakdown[
 /** Per-campaign rows for a single type's table, plus a pre-computed total (the type-level KPI call, not a naive sum). */
 export async function getCampaignsTable(
   range: DateRange,
-  type: CampaignType
+  type: CampaignType,
+  accountId: string
 ): Promise<{ rows: CampaignRow[]; total: Metrics }> {
-  const campaigns = await getClassifiedCampaigns();
+  const campaigns = await getClassifiedCampaigns(accountId);
   const ids = idsForType(campaigns, type);
   const [rawRows, adSetRows, total] = await Promise.all([
-    fetchInsights({ level: "campaign", fields: [...BASE_FIELDS, "campaign_id"], campaignIds: ids, range }),
+    fetchInsights({ accountId, level: "campaign", fields: [...BASE_FIELDS, "campaign_id"], campaignIds: ids, range }),
     fetchInsights({
+      accountId,
       level: "adset",
       fields: [...BASE_FIELDS, "campaign_id", "adset_id", "adset_name"],
       campaignIds: ids,
       range,
     }),
-    getKpis(range, type),
+    getKpis(range, accountId, type),
   ]);
 
   const adSetsByCampaign = new Map<string, AdSetRow[]>();
@@ -192,7 +200,7 @@ interface AdCreativeInfo {
   videoId: string | null;
 }
 
-async function getAdCreativeMap(campaignIds: string[]): Promise<Map<string, AdCreativeInfo>> {
+async function getAdCreativeMap(campaignIds: string[], accountId: string): Promise<Map<string, AdCreativeInfo>> {
   if (campaignIds.length === 0) return new Map();
 
   const rows = await metaFetchAll<{
@@ -200,7 +208,7 @@ async function getAdCreativeMap(campaignIds: string[]): Promise<Map<string, AdCr
     name: string;
     campaign_id: string;
     creative?: { id: string; thumbnail_url?: string; video_id?: string };
-  }>(`/${getAdAccountId()}/ads`, {
+  }>(`/${toActId(accountId)}/ads`, {
     fields:
       "id,name,campaign_id,creative.thumbnail_width(400).thumbnail_height(600){id,thumbnail_url,video_id}",
     filtering: filteringParam(campaignIds),
@@ -227,17 +235,19 @@ export type CreativeSortKey = "leads" | "spend" | "cpl" | "ctr" | "cpc" | "linkC
 
 export async function getCreatives(opts: {
   range: DateRange;
+  accountId: string;
   type?: CampaignType;
   format?: CreativeFormatFilter;
   sort?: CreativeSortKey;
 }): Promise<Creative[]> {
-  const campaigns = await getClassifiedCampaigns();
+  const campaigns = await getClassifiedCampaigns(opts.accountId);
   const ids = idsForType(campaigns, opts.type);
   const typeOf = new Map(campaigns.map((c) => [c.id, c.type]));
 
   const [adCreativeMap, insightRows] = await Promise.all([
-    getAdCreativeMap(ids),
+    getAdCreativeMap(ids, opts.accountId),
     fetchInsights({
+      accountId: opts.accountId,
       level: "ad",
       fields: [
         "ad_id",

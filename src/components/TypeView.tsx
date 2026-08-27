@@ -10,18 +10,20 @@ export async function TypeView({
   type,
   label,
   periodParams,
+  accountId,
 }: {
   type: CampaignType;
   label: string;
   periodParams: PeriodParams;
+  accountId: string;
 }) {
   const range = resolvePeriod(periodParams);
   const prevRange = previousPeriod(range);
 
   const [current, previous, { rows, total }] = await Promise.all([
-    getKpis(range, type),
-    getKpis(prevRange, type),
-    getCampaignsTable(range, type),
+    getKpis(range, accountId, type),
+    getKpis(prevRange, accountId, type),
+    getCampaignsTable(range, type, accountId),
   ]);
 
   const cards = buildTypeKpis(current, previous, label);

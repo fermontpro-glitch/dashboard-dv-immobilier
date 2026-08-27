@@ -5,23 +5,25 @@ import { TypeBreakdownPanel } from "@/components/TypeBreakdownPanel";
 import { buildOverviewKpis } from "@/lib/kpiCards";
 import { getDailySeries, getKpis, getTypeBreakdown } from "@/lib/meta/queries";
 import { previousPeriod, resolvePeriod } from "@/lib/meta/period";
+import { resolveAccount } from "@/lib/meta/accounts";
 
 export const dynamic = "force-dynamic";
 
 export default async function OverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; since?: string; until?: string }>;
+  searchParams: Promise<{ period?: string; since?: string; until?: string; account?: string }>;
 }) {
-  const { period, since, until } = await searchParams;
+  const { period, since, until, account } = await searchParams;
   const range = resolvePeriod({ period, since, until });
   const prevRange = previousPeriod(range);
+  const { id: accountId } = resolveAccount(account);
 
   const [current, previous, daily, breakdown] = await Promise.all([
-    getKpis(range),
-    getKpis(prevRange),
-    getDailySeries(range),
-    getTypeBreakdown(range),
+    getKpis(range, accountId),
+    getKpis(prevRange, accountId),
+    getDailySeries(range, accountId),
+    getTypeBreakdown(range, accountId),
   ]);
 
   const cards = buildOverviewKpis(current, previous);
