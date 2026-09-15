@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, Copy, Check, ExternalLink } from "lucide-react";
 
 type PreviewFormat = "MOBILE_FEED_STANDARD" | "DESKTOP_FEED_STANDARD" | "INSTAGRAM_STORY";
 
@@ -14,13 +14,27 @@ const FORMAT_OPTIONS: { value: PreviewFormat; label: string; width: number; heig
 export function CreativePreviewModal({
   adId,
   name,
+  destinationUrl,
   onClose,
 }: {
   adId: string;
   name: string;
+  destinationUrl: string | null;
   onClose: () => void;
 }) {
   const [format, setFormat] = useState<PreviewFormat>("MOBILE_FEED_STANDARD");
+  const [copied, setCopied] = useState(false);
+
+  async function copyUrl() {
+    if (!destinationUrl) return;
+    try {
+      await navigator.clipboard.writeText(destinationUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // clipboard API unavailable — the link is still visible and selectable
+    }
+  }
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -64,6 +78,34 @@ export function CreativePreviewModal({
             </button>
           </div>
         </div>
+
+        {destinationUrl ? (
+          <div className="flex items-center gap-2 w-full max-w-[420px] bg-white/5 border border-white/15 rounded-pill pl-3.5 pr-1.5 py-1.5">
+            <span className="flex-1 min-w-0 truncate font-mono text-xs text-blossom-100/85">
+              {destinationUrl}
+            </span>
+            <button
+              onClick={copyUrl}
+              className="shrink-0 inline-flex items-center gap-1 rounded-pill bg-white/10 hover:bg-white/20 px-2.5 py-1 text-[11px] font-semibold text-blossom-100 transition-colors"
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+              {copied ? "Copié" : "Copier"}
+            </button>
+            <a
+              href={destinationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 h-6 w-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-blossom-100"
+              aria-label="Ouvrir le lien de destination"
+            >
+              <ExternalLink size={12} />
+            </a>
+          </div>
+        ) : (
+          <p className="text-[11px] text-blossom-100/50 w-full max-w-[420px] text-center">
+            Aucune URL de destination trouvée pour cette créa.
+          </p>
+        )}
 
         <PreviewFrame
           key={format}

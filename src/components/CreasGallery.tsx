@@ -63,7 +63,7 @@ export function CreasGallery({ creatives }: { creatives: Creative[] }) {
   const [activeMetrics, setActiveMetrics] = useState<Set<MetricKey>>(
     new Set(IMAGE_DEFAULT_ACTIVE)
   );
-  const [preview, setPreview] = useState<{ adId: string; name: string } | null>(null);
+  const [preview, setPreview] = useState<{ adId: string; name: string; destinationUrl: string | null } | null>(null);
 
   const metricOptions = format === "video" ? VIDEO_METRIC_OPTIONS : IMAGE_METRIC_OPTIONS;
   const sortOptions = format === "video"
@@ -98,7 +98,7 @@ export function CreasGallery({ creatives }: { creatives: Creative[] }) {
   const activeMetricsOrdered = metricOptions.filter((k) => activeMetrics.has(k));
 
   function openPreview(creative: Creative) {
-    setPreview({ adId: creative.sampleAdId, name: creative.name });
+    setPreview({ adId: creative.sampleAdId, name: creative.name, destinationUrl: creative.destinationUrl });
   }
 
   return (
@@ -210,6 +210,7 @@ export function CreasGallery({ creatives }: { creatives: Creative[] }) {
         <CreativePreviewModal
           adId={preview.adId}
           name={preview.name}
+          destinationUrl={preview.destinationUrl}
           onClose={() => setPreview(null)}
         />
       )}
