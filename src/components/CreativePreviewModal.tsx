@@ -14,21 +14,21 @@ const FORMAT_OPTIONS: { value: PreviewFormat; label: string; width: number; heig
 export function CreativePreviewModal({
   adId,
   name,
-  destinationUrl,
+  adPermalink,
   onClose,
 }: {
   adId: string;
   name: string;
-  destinationUrl: string | null;
+  adPermalink: string | null;
   onClose: () => void;
 }) {
   const [format, setFormat] = useState<PreviewFormat>("MOBILE_FEED_STANDARD");
   const [copied, setCopied] = useState(false);
 
   async function copyUrl() {
-    if (!destinationUrl) return;
+    if (!adPermalink) return;
     try {
-      await navigator.clipboard.writeText(destinationUrl);
+      await navigator.clipboard.writeText(adPermalink);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -79,10 +79,10 @@ export function CreativePreviewModal({
           </div>
         </div>
 
-        {destinationUrl ? (
+        {adPermalink ? (
           <div className="flex items-center gap-2 w-full max-w-[420px] bg-white/5 border border-white/15 rounded-pill pl-3.5 pr-1.5 py-1.5">
             <span className="flex-1 min-w-0 truncate font-mono text-xs text-blossom-100/85">
-              {destinationUrl}
+              {adPermalink}
             </span>
             <button
               onClick={copyUrl}
@@ -92,18 +92,18 @@ export function CreativePreviewModal({
               {copied ? "Copié" : "Copier"}
             </button>
             <a
-              href={destinationUrl}
+              href={adPermalink}
               target="_blank"
               rel="noopener noreferrer"
               className="shrink-0 h-6 w-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-blossom-100"
-              aria-label="Ouvrir le lien de destination"
+              aria-label="Ouvrir la pub sur Facebook"
             >
               <ExternalLink size={12} />
             </a>
           </div>
         ) : (
           <p className="text-[11px] text-blossom-100/50 w-full max-w-[420px] text-center">
-            Aucune URL de destination trouvée pour cette créa.
+            Lien du post introuvable pour cette créa.
           </p>
         )}
 

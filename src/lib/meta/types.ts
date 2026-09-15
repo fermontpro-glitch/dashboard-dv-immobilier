@@ -88,7 +88,7 @@ export interface Creative {
   videoDurationSec: number | null;
   adCount: number;
   sampleAdId: string;
-  destinationUrl: string | null;
+  adPermalink: string | null;
   metrics: Metrics;
   hookRate: number | null;
   holdRate: number | null;

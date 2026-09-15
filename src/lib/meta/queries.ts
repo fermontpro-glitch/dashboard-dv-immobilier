@@ -198,29 +198,17 @@ interface AdCreativeInfo {
   creativeId: string;
   thumbnailUrl: string | null;
   videoId: string | null;
-  destinationUrl: string | null;
+  adPermalink: string | null;
 }
 
-interface RawCreativeDetail {
-  id: string;
-  thumbnail_url?: string;
-  video_id?: string;
-  object_story_spec?: {
-    link_data?: { link?: string; call_to_action?: { value?: { link?: string } } };
-    video_data?: { call_to_action?: { value?: { link?: string } } };
-  };
-  asset_feed_spec?: { link_urls?: { website_url?: string }[] };
-}
-
-function extractDestinationUrl(creative: RawCreativeDetail): string | null {
-  const oss = creative.object_story_spec;
-  return (
-    oss?.link_data?.call_to_action?.value?.link ||
-    oss?.link_data?.link ||
-    oss?.video_data?.call_to_action?.value?.link ||
-    creative.asset_feed_spec?.link_urls?.[0]?.website_url ||
-    null
-  );
+/** effective_object_story_id is "{page_id}_{post_id}" — the universal Facebook permalink shape. */
+function permalinkFromStoryId(storyId?: string): string | null {
+  if (!storyId) return null;
+  const sep = storyId.indexOf("_");
+  if (sep === -1) return null;
+  const pageId = storyId.slice(0, sep);
+  const postId = storyId.slice(sep + 1);
+  return `https://www.facebook.com/${pageId}/posts/${postId}`;
 }
 
 async function getAdCreativeMap(campaignIds: string[], accountId: string): Promise<Map<string, AdCreativeInfo>> {
@@ -230,10 +218,15 @@ async function getAdCreativeMap(campaignIds: string[], accountId: string): Promi
     id: string;
     name: string;
     campaign_id: string;
-    creative?: RawCreativeDetail;
+    creative?: {
+      id: string;
+      thumbnail_url?: string;
+      video_id?: string;
+      effective_object_story_id?: string;
+    };
   }>(`/${toActId(accountId)}/ads`, {
     fields:
-      "id,name,campaign_id,creative.thumbnail_width(400).thumbnail_height(600){id,thumbnail_url,video_id,object_story_spec{link_data{link,call_to_action},video_data{call_to_action}},asset_feed_spec{link_urls}}",
+      "id,name,campaign_id,creative.thumbnail_width(400).thumbnail_height(600){id,thumbnail_url,video_id,effective_object_story_id}",
     filtering: filteringParam(campaignIds),
     limit: "25",
   });
@@ -248,7 +241,7 @@ async function getAdCreativeMap(campaignIds: string[], accountId: string): Promi
       creativeId: row.creative.id,
       thumbnailUrl: row.creative.thumbnail_url ?? null,
       videoId: row.creative.video_id ?? null,
-      destinationUrl: extractDestinationUrl(row.creative),
+      adPermalink: permalinkFromStoryId(row.creative.effective_object_story_id),
     });
   }
   return map;
@@ -298,7 +291,7 @@ export async function getCreatives(opts: {
     thumbnailUrl: string | null;
     videoId: string | null;
     sampleAdId: string;
-    destinationUrl: string | null;
+    adPermalink: string | null;
     adIds: Set<string>;
     rows: RawInsightsRow[];
     videoPlays: number;
@@ -320,7 +313,7 @@ export async function getCreatives(opts: {
         thumbnailUrl: info.thumbnailUrl,
         videoId: info.videoId,
         sampleAdId: info.adId,
-        destinationUrl: info.destinationUrl,
+        adPermalink: info.adPermalink,
         adIds: new Set(),
         rows: [],
         videoPlays: 0,
@@ -358,7 +351,7 @@ export async function getCreatives(opts: {
       videoDurationSec: g.videoId ? durations[g.videoId]?.length ?? null : null,
       adCount: g.adIds.size,
       sampleAdId: g.sampleAdId,
-      destinationUrl: g.destinationUrl,
+      adPermalink: g.adPermalink,
       metrics,
       hookRate: isVideo ? hookRate(videoViews3s, metrics.impressions) : null,
       holdRate: isVideo ? holdRate(g.videoP100, g.videoPlays) : null,
