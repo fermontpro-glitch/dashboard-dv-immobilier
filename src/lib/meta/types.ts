@@ -35,6 +35,7 @@ export interface RawInsightsRow {
   video_p50_watched_actions?: ActionValue[];
   video_p75_watched_actions?: ActionValue[];
   video_p100_watched_actions?: ActionValue[];
+  video_thruplay_watched_actions?: ActionValue[];
 }
 
 export interface Metrics {

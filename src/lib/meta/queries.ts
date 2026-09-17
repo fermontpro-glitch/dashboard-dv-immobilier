@@ -275,8 +275,7 @@ export async function getCreatives(opts: {
         "impressions",
         "inline_link_clicks",
         "actions",
-        "video_play_actions",
-        "video_p100_watched_actions",
+        "video_thruplay_watched_actions",
       ],
       campaignIds: ids,
       range: opts.range,
@@ -294,8 +293,7 @@ export async function getCreatives(opts: {
     adPermalink: string | null;
     adIds: Set<string>;
     rows: RawInsightsRow[];
-    videoPlays: number;
-    videoP100: number;
+    videoThruplays: number;
   }
 
   const groups = new Map<string, Group>();
@@ -316,15 +314,13 @@ export async function getCreatives(opts: {
         adPermalink: info.adPermalink,
         adIds: new Set(),
         rows: [],
-        videoPlays: 0,
-        videoP100: 0,
+        videoThruplays: 0,
       });
     }
     const group = groups.get(key)!;
     group.adIds.add(info.adId);
     group.rows.push(row);
-    group.videoPlays += getActionValue(row.video_play_actions, "video_view");
-    group.videoP100 += getActionValue(row.video_p100_watched_actions, "video_view");
+    group.videoThruplays += getActionValue(row.video_thruplay_watched_actions, "video_view");
   }
 
   const videoIds = [...groups.values()].map((g) => g.videoId).filter((id): id is string => !!id);
@@ -354,7 +350,7 @@ export async function getCreatives(opts: {
       adPermalink: g.adPermalink,
       metrics,
       hookRate: isVideo ? hookRate(videoViews3s, metrics.impressions) : null,
-      holdRate: isVideo ? holdRate(g.videoP100, g.videoPlays) : null,
+      holdRate: isVideo ? holdRate(g.videoThruplays, videoViews3s) : null,
     };
   });
 

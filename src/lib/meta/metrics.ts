@@ -72,6 +72,7 @@ export function hookRate(videoViews3s: number, impressions: number): number | nu
   return impressions > 0 ? (videoViews3s / impressions) * 100 : null;
 }
 
-export function holdRate(p100Watched: number, plays: number): number | null {
-  return plays > 0 ? (p100Watched / plays) * 100 : null;
+/** ThruPlay ÷ vues 3 s (jamais p100 ÷ plays, ni ÷ impressions). */
+export function holdRate(thruPlays: number, views3s: number): number | null {
+  return views3s > 0 ? (thruPlays / views3s) * 100 : null;
 }
