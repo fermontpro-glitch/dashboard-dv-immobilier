@@ -34,26 +34,38 @@ function deriveRatios(sums: RawSums): Metrics {
   };
 }
 
-/** Use for a row that already IS the exact aggregation level wanted (reach/frequency are trustworthy here). */
-export function metricsFromRow(row: RawInsightsRow): Metrics {
+/**
+ * Use for a row that already IS the exact aggregation level wanted (reach/frequency are trustworthy here).
+ * `resultActionType` lets a caller point at the ad set's actual optimization event (e.g. a custom
+ * conversion `offsite_conversion.custom.<id>`) instead of the standard "lead" action, for ad sets
+ * that convert via a pixel custom conversion rather than a native lead form.
+ */
+export function metricsFromRow(row: RawInsightsRow, resultActionType: string = "lead"): Metrics {
   return deriveRatios({
     spend: Number(row.spend ?? 0),
     impressions: Number(row.impressions ?? 0),
     reach: Number(row.reach ?? 0),
     frequency: Number(row.frequency ?? 0),
     linkClicks: Number(row.inline_link_clicks ?? 0),
-    leads: getActionValue(row.actions, "lead"),
+    leads: getActionValue(row.actions, resultActionType),
   });
 }
 
-/** Sums raw counts across rows and re-derives ratios (reach/frequency dropped — not meaningfully summable). */
-export function sumRows(rows: RawInsightsRow[]): Metrics {
+/**
+ * Sums raw counts across rows and re-derives ratios (reach/frequency dropped — not meaningfully summable).
+ * `resultActionTypeFor` resolves which action type counts as "results" per row (rows can span ad sets
+ * with different optimization goals/custom conversions); defaults to the standard "lead" action.
+ */
+export function sumRows(
+  rows: RawInsightsRow[],
+  resultActionTypeFor?: (row: RawInsightsRow) => string
+): Metrics {
   const sums = rows.reduce<RawSums>(
     (acc, row) => {
       acc.spend += Number(row.spend ?? 0);
       acc.impressions += Number(row.impressions ?? 0);
       acc.linkClicks += Number(row.inline_link_clicks ?? 0);
-      acc.leads += getActionValue(row.actions, "lead");
+      acc.leads += getActionValue(row.actions, resultActionTypeFor ? resultActionTypeFor(row) : "lead");
       return acc;
     },
     { spend: 0, impressions: 0, linkClicks: 0, leads: 0 }

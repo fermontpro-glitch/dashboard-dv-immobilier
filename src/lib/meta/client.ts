@@ -75,21 +75,25 @@ export async function metaGet<T>(
   return metaFetch<T>(path, params);
 }
 
-/** Batched multi-get via the `ids` param, chunked to stay within URL limits. */
+/** Batched multi-get via the `ids` param, chunked to stay within URL limits and fetched concurrently. */
 export async function metaGetByIds<T>(
   ids: string[],
   fields: string[],
   chunkSize = 50
 ): Promise<Record<string, T>> {
-  const out: Record<string, T> = {};
+  const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += chunkSize) {
     const chunk = ids.slice(i, i + chunkSize);
-    if (chunk.length === 0) continue;
-    const body = await metaFetch<Record<string, T>>("/", {
-      ids: chunk.join(","),
-      fields: fields.join(","),
-    });
-    Object.assign(out, body);
+    if (chunk.length > 0) chunks.push(chunk);
   }
+
+  const bodies = await Promise.all(
+    chunks.map((chunk) =>
+      metaFetch<Record<string, T>>("/", { ids: chunk.join(","), fields: fields.join(",") })
+    )
+  );
+
+  const out: Record<string, T> = {};
+  for (const body of bodies) Object.assign(out, body);
   return out;
 }

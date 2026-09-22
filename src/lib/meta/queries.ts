@@ -52,6 +52,30 @@ function filteringParam(campaignIds: string[]): string {
   ]);
 }
 
+/**
+ * Resolves, per ad set, which action type counts as "results": an ad set optimizing for a pixel
+ * custom conversion (e.g. a "confirmation page" view rather than a native lead form) reports its
+ * conversions under `offsite_conversion.custom.<id>`, not the standard "lead" action — so leads/CPL
+ * for those ad sets would otherwise read as ~0. Scoped to the ad set IDs actually passed in (no
+ * pagination — a handful of ad sets per call), rather than a batched-multiget cache since ad set
+ * targeting/optimization can change and each caller already knows exactly which ad sets it needs.
+ */
+async function getResultActionTypes(adsetIds: string[]): Promise<Map<string, string>> {
+  if (adsetIds.length === 0) return new Map();
+
+  const rows = await metaGetByIds<{
+    id: string;
+    promoted_object?: { custom_conversion_id?: string };
+  }>(adsetIds, ["id", "promoted_object"]);
+
+  const map = new Map<string, string>();
+  for (const row of Object.values(rows)) {
+    const customId = row.promoted_object?.custom_conversion_id;
+    map.set(row.id, customId ? `offsite_conversion.custom.${customId}` : "lead");
+  }
+  return map;
+}
+
 async function fetchInsights(opts: {
   accountId: string;
   level: "account" | "campaign" | "adset" | "ad";
@@ -80,8 +104,21 @@ const BASE_FIELDS = ["spend", "impressions", "reach", "frequency", "inline_link_
 export async function getKpis(range: DateRange, accountId: string, type?: CampaignType): Promise<Metrics> {
   const campaigns = await getClassifiedCampaigns(accountId);
   const ids = idsForType(campaigns, type);
-  const rows = await fetchInsights({ accountId, level: "account", fields: BASE_FIELDS, campaignIds: ids, range });
-  return rows[0] ? metricsFromRow(rows[0]) : EMPTY_METRICS;
+
+  // Spend/impressions/reach/frequency/CTR/CPC come from the account-level row (exact Meta dedup).
+  // Leads/CPL are re-derived bottom-up from ad-set rows so ad sets optimizing for a custom
+  // conversion count correctly instead of reading 0 under the standard "lead" action.
+  const [accountRows, adsetRows] = await Promise.all([
+    fetchInsights({ accountId, level: "account", fields: BASE_FIELDS, campaignIds: ids, range }),
+    fetchInsights({ accountId, level: "adset", fields: ["spend", "actions", "adset_id"], campaignIds: ids, range }),
+  ]);
+
+  const adsetIds = [...new Set(adsetRows.map((r) => r.adset_id).filter((id): id is string => !!id))];
+  const resultTypes = await getResultActionTypes(adsetIds);
+  const results = sumRows(adsetRows, (row) => (row.adset_id && resultTypes.get(row.adset_id)) || "lead").leads;
+
+  const base = accountRows[0] ? metricsFromRow(accountRows[0]) : EMPTY_METRICS;
+  return { ...base, leads: results, cpl: results > 0 ? base.spend / results : 0 };
 }
 
 /** Daily spend + leads series for the evolution chart (account-wide, excluded campaigns already filtered out). */
@@ -109,15 +146,30 @@ export async function getDailySeries(range: DateRange, accountId: string): Promi
 export async function getTypeBreakdown(range: DateRange, accountId: string): Promise<TypeBreakdown[]> {
   const campaigns = await getClassifiedCampaigns(accountId);
   const ids = idsForType(campaigns);
-  const rows = await fetchInsights({
-    accountId,
-    level: "campaign",
-    fields: [...BASE_FIELDS, "campaign_id"],
-    campaignIds: ids,
-    range,
-  });
+  const [rows, adsetRows] = await Promise.all([
+    fetchInsights({ accountId, level: "campaign", fields: [...BASE_FIELDS, "campaign_id"], campaignIds: ids, range }),
+    fetchInsights({
+      accountId,
+      level: "adset",
+      fields: ["spend", "actions", "campaign_id", "adset_id"],
+      campaignIds: ids,
+      range,
+    }),
+  ]);
 
   const typeOf = new Map(campaigns.map((c) => [c.id, c.type]));
+
+  // Leads/CPL rebuilt bottom-up from ad sets (custom-conversion aware) so this panel's totals match
+  // the headline KPI card above it instead of under-counting Lead Magnet-style custom conversions.
+  const adsetIds = [...new Set(adsetRows.map((r) => r.adset_id).filter((id): id is string => !!id))];
+  const resultTypes = await getResultActionTypes(adsetIds);
+  const resultsByType = new Map<CampaignType, number>();
+  for (const row of adsetRows) {
+    const type = (row.campaign_id && typeOf.get(row.campaign_id)) || "other";
+    const resultType = (row.adset_id && resultTypes.get(row.adset_id)) || "lead";
+    resultsByType.set(type, (resultsByType.get(type) ?? 0) + getActionValue(row.actions, resultType));
+  }
+
   const byType = new Map<CampaignType, RawInsightsRow[]>();
   for (const row of rows) {
     const type = (row.campaign_id && typeOf.get(row.campaign_id)) || "other";
@@ -132,12 +184,13 @@ export async function getTypeBreakdown(range: DateRange, accountId: string): Pro
     .filter((t) => byType.has(t))
     .map((type) => {
       const metrics = sumRows(byType.get(type)!);
+      const leads = resultsByType.get(type) ?? 0;
       return {
         type,
         spend: metrics.spend,
         spendShare: totalSpend > 0 ? (metrics.spend / totalSpend) * 100 : 0,
-        leads: metrics.leads,
-        cpl: metrics.cpl,
+        leads,
+        cpl: leads > 0 ? metrics.spend / leads : 0,
         ctr: metrics.ctr,
       };
     });
@@ -163,15 +216,21 @@ export async function getCampaignsTable(
     getKpis(range, accountId, type),
   ]);
 
+  // Same custom-conversion awareness as getCreatives/getKpis: resolve each ad set's real
+  // result action, then roll it up to the campaign level (campaign-level rows only carry Meta's
+  // own blended "lead" sum, which can't be corrected in place — it has to be rebuilt from ad sets).
+  const adsetIds = [...new Set(adSetRows.map((r) => r.adset_id).filter((id): id is string => !!id))];
+  const resultTypes = await getResultActionTypes(adsetIds);
+  const resultTypeFor = (row: RawInsightsRow) => (row.adset_id && resultTypes.get(row.adset_id)) || "lead";
+
   const adSetsByCampaign = new Map<string, AdSetRow[]>();
+  const resultsByCampaign = new Map<string, number>();
   for (const row of adSetRows) {
     if (!row.campaign_id || !row.adset_id) continue;
+    const metrics = metricsFromRow(row, resultTypeFor(row));
     if (!adSetsByCampaign.has(row.campaign_id)) adSetsByCampaign.set(row.campaign_id, []);
-    adSetsByCampaign.get(row.campaign_id)!.push({
-      id: row.adset_id,
-      name: row.adset_name ?? "—",
-      metrics: metricsFromRow(row),
-    });
+    adSetsByCampaign.get(row.campaign_id)!.push({ id: row.adset_id, name: row.adset_name ?? "—", metrics });
+    resultsByCampaign.set(row.campaign_id, (resultsByCampaign.get(row.campaign_id) ?? 0) + metrics.leads);
   }
   for (const adSets of adSetsByCampaign.values()) {
     adSets.sort((a, b) => b.metrics.spend - a.metrics.spend);
@@ -179,13 +238,17 @@ export async function getCampaignsTable(
 
   const nameOf = new Map(campaigns.map((c) => [c.id, c.name]));
   const rows: CampaignRow[] = rawRows
-    .map((row) => ({
-      id: row.campaign_id ?? "",
-      name: (row.campaign_id && nameOf.get(row.campaign_id)) || row.campaign_name || "—",
-      type,
-      metrics: metricsFromRow(row),
-      adSets: (row.campaign_id && adSetsByCampaign.get(row.campaign_id)) || [],
-    }))
+    .map((row) => {
+      const base = metricsFromRow(row);
+      const results = row.campaign_id ? resultsByCampaign.get(row.campaign_id) ?? 0 : 0;
+      return {
+        id: row.campaign_id ?? "",
+        name: (row.campaign_id && nameOf.get(row.campaign_id)) || row.campaign_name || "—",
+        type,
+        metrics: { ...base, leads: results, cpl: results > 0 ? base.spend / results : 0 },
+        adSets: (row.campaign_id && adSetsByCampaign.get(row.campaign_id)) || [],
+      };
+    })
     .sort((a, b) => b.metrics.spend - a.metrics.spend);
 
   return { rows, total };
@@ -211,10 +274,18 @@ function permalinkFromStoryId(storyId?: string): string | null {
   return `https://www.facebook.com/${pageId}/posts/${postId}`;
 }
 
-async function getAdCreativeMap(campaignIds: string[], accountId: string): Promise<Map<string, AdCreativeInfo>> {
-  if (campaignIds.length === 0) return new Map();
+/**
+ * Fetches creative info for exactly the given ad IDs via the batched multi-get endpoint, instead of
+ * paging through `/ads?filtering=campaign.id IN [...]`. An account accumulates ads across its whole
+ * history (DV Immobilier alone has 1000+, mostly old paused variants); paging that list with a capped
+ * `maxPages` can silently truncate before reaching an older or lower-volume campaign's ads — which is
+ * exactly how the "LM - Tableau étude" creatives went missing from the gallery. Scoping to ad IDs that
+ * actually have insight rows in the requested period sidesteps the cap entirely and is cheaper besides.
+ */
+async function getAdCreativeMap(adIds: string[]): Promise<Map<string, AdCreativeInfo>> {
+  if (adIds.length === 0) return new Map();
 
-  const rows = await metaFetchAll<{
+  const rows = await metaGetByIds<{
     id: string;
     name: string;
     campaign_id: string;
@@ -224,15 +295,15 @@ async function getAdCreativeMap(campaignIds: string[], accountId: string): Promi
       video_id?: string;
       effective_object_story_id?: string;
     };
-  }>(`/${toActId(accountId)}/ads`, {
-    fields:
-      "id,name,campaign_id,creative.thumbnail_width(400).thumbnail_height(600){id,thumbnail_url,video_id,effective_object_story_id}",
-    filtering: filteringParam(campaignIds),
-    limit: "25",
-  });
+  }>(adIds, [
+    "id",
+    "name",
+    "campaign_id",
+    "creative.thumbnail_width(400).thumbnail_height(600){id,thumbnail_url,video_id,effective_object_story_id}",
+  ]);
 
   const map = new Map<string, AdCreativeInfo>();
-  for (const row of rows) {
+  for (const row of Object.values(rows)) {
     if (!row.creative) continue;
     map.set(row.id, {
       adId: row.id,
@@ -261,26 +332,32 @@ export async function getCreatives(opts: {
   const ids = idsForType(campaigns, opts.type);
   const typeOf = new Map(campaigns.map((c) => [c.id, c.type]));
 
-  const [adCreativeMap, insightRows] = await Promise.all([
-    getAdCreativeMap(ids, opts.accountId),
-    fetchInsights({
-      accountId: opts.accountId,
-      level: "ad",
-      fields: [
-        "ad_id",
-        "ad_name",
-        "campaign_id",
-        "campaign_name",
-        "spend",
-        "impressions",
-        "inline_link_clicks",
-        "actions",
-        "video_thruplay_watched_actions",
-      ],
-      campaignIds: ids,
-      range: opts.range,
-    }),
+  const insightRows = await fetchInsights({
+    accountId: opts.accountId,
+    level: "ad",
+    fields: [
+      "ad_id",
+      "ad_name",
+      "campaign_id",
+      "campaign_name",
+      "adset_id",
+      "spend",
+      "impressions",
+      "inline_link_clicks",
+      "actions",
+      "video_thruplay_watched_actions",
+    ],
+    campaignIds: ids,
+    range: opts.range,
+  });
+
+  const adIds = [...new Set(insightRows.map((r) => r.ad_id).filter((id): id is string => !!id))];
+  const adsetIds = [...new Set(insightRows.map((r) => r.adset_id).filter((id): id is string => !!id))];
+  const [adCreativeMap, resultTypes] = await Promise.all([
+    getAdCreativeMap(adIds),
+    getResultActionTypes(adsetIds),
   ]);
+  const resultTypeFor = (row: RawInsightsRow) => (row.adset_id && resultTypes.get(row.adset_id)) || "lead";
 
   interface Group {
     creativeId: string;
@@ -331,7 +408,7 @@ export async function getCreatives(opts: {
       : {};
 
   let creatives: Creative[] = [...groups.values()].map((g) => {
-    const metrics = sumRows(g.rows);
+    const metrics = sumRows(g.rows, resultTypeFor);
     const videoViews3s = g.rows.reduce(
       (sum, r) => sum + getActionValue(r.actions, "video_view"),
       0
